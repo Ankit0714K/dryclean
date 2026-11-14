@@ -7,6 +7,8 @@ import rateLimit from 'express-rate-limit';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const app = express();
 app.use(helmet());
@@ -125,5 +127,9 @@ app.post('/api/admin/services',admin,async(req,res)=>{const p=z.object({name:z.s
 app.patch('/api/admin/services/:id',admin,async(req,res)=>{const p=z.object({name:z.string().min(2).max(100).optional(),description:z.string().max(500).optional(),price:z.number().min(0).optional(),pricing_unit:z.string().max(40).optional(),enabled:z.boolean().optional(),image_url:z.string().url().nullable().optional()}).safeParse(req.body);if(!p.success)return fail(res,'Invalid service update.');const {data,error}=await supabase.from('services').update(p.data).eq('id',req.params.id).select().single();if(error)return fail(res,'Unable to update service.',500);res.json(data);});
 app.delete('/api/admin/services/:id',admin,async(req,res)=>{const {error}=await supabase.from('services').delete().eq('id',req.params.id);if(error)return fail(res,'Unable to delete service.',500);res.status(204).end();});
 app.post('/api/admin/uploads',admin,upload.single('file'),async(req,res)=>{const bucket=String(req.query.bucket||'');if(!['service-images','business-assets'].includes(bucket))return fail(res,'Invalid image destination.');if(!req.file)return fail(res,'Choose a JPG, PNG, or WEBP image up to 5 MB.');const ext={ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp' }[req.file.mimetype];const path=`${Date.now()}-${randomUUID()}.${ext}`;const {error}=await supabase.storage.from(bucket).upload(path,req.file.buffer,{contentType:req.file.mimetype,cacheControl:'3600',upsert:false});if(error)return fail(res,'Image upload failed.',500);const {data}=supabase.storage.from(bucket).getPublicUrl(path);res.status(201).json({url:data.publicUrl,path});});
+const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
+app.use('/api', (_req,res) => res.status(404).json({ error:'Not found.' }));
+app.use(express.static(clientDist));
+app.get('*', (_req,res) => res.sendFile(path.join(clientDist,'index.html')));
 app.use((err,_req,res,_next)=>{console.error(err);res.status(500).json({error:'Unexpected server error.'});});
 const port=Number(process.env.PORT)||4000; app.listen(port,()=>console.log(`Laundry API listening on ${port}`));

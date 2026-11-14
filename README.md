@@ -62,11 +62,17 @@ Open `http://localhost:5173`. The API listens at `http://localhost:4000`. Book a
 
 If npm workspace linking is blocked by Windows permissions, install separately with `npm install --prefix client --workspaces=false` and `npm install --prefix server --workspaces=false`; install the root `concurrently` dev dependency with `npm install --workspaces=false` before using the root `npm run dev` script.
 
-## 5. Deploy
+## 5. Deploy on Render
 
-- Deploy `server/` as a Node web service (Render, Railway, or equivalent). Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CLIENT_ORIGIN` (the deployed frontend origin), and `PORT` in the host's secret environment settings.
-- Deploy `client/` as a static Vite site. Build command from the repository root: `npm run build --workspace client`; output directory: `client/dist`. Set `VITE_API_URL` to the deployed API URL plus `/api` before building.
-- Enable HTTPS and set the API CORS origin to the exact frontend origin. Do not publish the service-role key or put secrets in Vite environment variables.
+This repository includes a Render Blueprint that deploys the React site and Express API together at one HTTPS URL.
+
+1. Create a Supabase project. Run `supabase/migrations/0001_initial_schema.sql` and then `0002_management_features.sql` in the Supabase SQL Editor.
+2. Create the first staff user in Supabase Authentication and add its UUID to `public.admins` as described above.
+3. In Render, create a new Blueprint from this repository's `main` branch and select the included `render.yaml`.
+4. Enter the prompted server environment values: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`. Keep the service-role key in Render's server environment only.
+5. After the deploy succeeds, open the Render URL, then configure the business contact details and service prices in the admin dashboard.
+
+The site and API share the same origin; the API is available under `/api`. Never put the service-role key in a `VITE_*` variable or commit it to the repository.
 
 ## Verification and remaining launch checks
 
